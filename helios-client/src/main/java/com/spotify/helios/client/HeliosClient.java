@@ -26,6 +26,7 @@ import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.util.concurrent.Futures.catching;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.Futures.transform;
+import static com.google.common.util.concurrent.Futures.transformAsync;
 import static com.spotify.helios.common.VersionCompatibility.HELIOS_SERVER_VERSION_HEADER;
 import static com.spotify.helios.common.VersionCompatibility.HELIOS_VERSION_STATUS_HEADER;
 import static java.lang.String.format;
@@ -61,6 +62,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
+import com.spotify.clienttlstools.tls.CertKeyPaths;
 import com.spotify.helios.common.HeliosException;
 import com.spotify.helios.common.Json;
 import com.spotify.helios.common.Resolver;
@@ -231,7 +234,7 @@ public class HeliosClient implements Closeable {
   }
 
   private <T> ListenableFuture<T> get(final URI uri, final JavaType javaType) {
-    return transform(request(uri, "GET"), new ConvertResponseToPojo<T>(javaType));
+    return transformAsync(request(uri, "GET"), new ConvertResponseToPojo<T>(javaType));
   }
 
   private ListenableFuture<Integer> put(final URI uri) {
@@ -248,7 +251,7 @@ public class HeliosClient implements Closeable {
                                                                 HTTP_BAD_METHOD,
                                                                 HTTP_BAD_REQUEST,
                                                                 HTTP_FORBIDDEN);
-    return transform(request(uri(path("/hosts/%s/jobs/%s", host, job.getJobId()),
+    return transformAsync(request(uri(path("/hosts/%s/jobs/%s", host, job.getJobId()),
                                  ImmutableMap.of("token", token)),
                              "PUT", job),
                      ConvertResponseToPojo.create(JobDeployResponse.class, deserializeReturnCodes));
@@ -260,7 +263,7 @@ public class HeliosClient implements Closeable {
 
   public ListenableFuture<SetGoalResponse> setGoal(final Deployment job, final String host,
                                                    final String token) {
-    return transform(request(uri(path("/hosts/%s/jobs/%s", host, job.getJobId()),
+    return transformAsync(request(uri(path("/hosts/%s/jobs/%s", host, job.getJobId()),
                                  ImmutableMap.of("token", token)),
                              "PATCH", job),
                      ConvertResponseToPojo.create(SetGoalResponse.class,
@@ -303,7 +306,7 @@ public class HeliosClient implements Closeable {
         TypeFactory.defaultInstance().constructMapType(Map.class, String.class, HostStatus.class),
         ImmutableSet.of(HTTP_OK));
 
-    return transform(request(uri("/hosts/statuses", queryParams), "POST", hosts), converter);
+    return transformAsync(request(uri("/hosts/statuses", queryParams), "POST", hosts), converter);
   }
 
   public ListenableFuture<Integer> registerHost(final String host, final String id) {
@@ -315,7 +318,7 @@ public class HeliosClient implements Closeable {
   }
 
   public ListenableFuture<JobDeleteResponse> deleteJob(final JobId id, final String token) {
-    return transform(request(uri(path("/jobs/%s", id),
+    return transformAsync(request(uri(path("/jobs/%s", id),
                                  ImmutableMap.of("token", token)),
                              "DELETE"),
                      ConvertResponseToPojo.create(JobDeleteResponse.class,
@@ -330,7 +333,7 @@ public class HeliosClient implements Closeable {
 
   public ListenableFuture<JobUndeployResponse> undeploy(final JobId jobId, final String host,
                                                         final String token) {
-    return transform(request(uri(path("/hosts/%s/jobs/%s", host, jobId),
+    return transformAsync(request(uri(path("/hosts/%s/jobs/%s", host, jobId),
                                  ImmutableMap.of("token", token)),
                              "DELETE"),
                      ConvertResponseToPojo.create(JobUndeployResponse.class,
@@ -340,7 +343,7 @@ public class HeliosClient implements Closeable {
   }
 
   public ListenableFuture<HostDeregisterResponse> deregisterHost(final String host) {
-    return transform(request(uri(path("/hosts/%s", host)), "DELETE"),
+    return transformAsync(request(uri(path("/hosts/%s", host)), "DELETE"),
                      ConvertResponseToPojo.create(HostDeregisterResponse.class,
                                                   ImmutableSet.of(HTTP_OK, HTTP_NOT_FOUND)));
   }
@@ -415,7 +418,7 @@ public class HeliosClient implements Closeable {
         }
     );
 
-    return transform(
+    return transformAsync(
         futureWithFallback,
         new AsyncFunction<Response, VersionResponse>() {
           @Override
@@ -431,7 +434,7 @@ public class HeliosClient implements Closeable {
   }
 
   public ListenableFuture<CreateJobResponse> createJob(final Job descriptor) {
-    return transform(request(uri("/jobs/"), "POST", descriptor),
+    return transformAsync(request(uri("/jobs/"), "POST", descriptor),
                      ConvertResponseToPojo.create(CreateJobResponse.class,
                                                   ImmutableSet.of(HTTP_OK, HTTP_BAD_REQUEST)));
   }
@@ -446,7 +449,7 @@ public class HeliosClient implements Closeable {
   }
 
   public ListenableFuture<TaskStatusEvents> jobHistory(final JobId jobId) {
-    return transform(
+    return transformAsync(
         request(uri(path("/history/jobs/%s", jobId.toString())), "GET"),
         ConvertResponseToPojo.create(TaskStatusEvents.class,
                                      ImmutableSet.of(HTTP_OK, HTTP_NOT_FOUND)));
@@ -461,7 +464,7 @@ public class HeliosClient implements Closeable {
         TypeFactory.defaultInstance().constructMapType(Map.class, JobId.class, JobStatus.class),
         ImmutableSet.of(HTTP_OK));
 
-    return transform(request(uri("/jobs/statuses"), "POST", jobs), converter);
+    return transformAsync(request(uri("/jobs/statuses"), "POST", jobs), converter);
   }
 
   public ListenableFuture<DeploymentGroup> deploymentGroup(final String name) {
@@ -481,20 +484,20 @@ public class HeliosClient implements Closeable {
 
   public ListenableFuture<CreateDeploymentGroupResponse> createDeploymentGroup(
       final DeploymentGroup descriptor) {
-    return transform(request(uri("/deployment-group/"), "POST", descriptor),
+    return transformAsync(request(uri("/deployment-group/"), "POST", descriptor),
                      ConvertResponseToPojo.create(CreateDeploymentGroupResponse.class,
                                                   ImmutableSet.of(HTTP_OK, HTTP_BAD_REQUEST)));
   }
 
   public ListenableFuture<RemoveDeploymentGroupResponse> removeDeploymentGroup(final String name) {
-    return transform(request(uri("/deployment-group/" + name), "DELETE"),
+    return transformAsync(request(uri("/deployment-group/" + name), "DELETE"),
                      ConvertResponseToPojo.create(RemoveDeploymentGroupResponse.class,
                                                   ImmutableSet.of(HTTP_OK, HTTP_BAD_REQUEST)));
   }
 
   public ListenableFuture<RollingUpdateResponse> rollingUpdate(
       final String deploymentGroupName, final JobId job, final RolloutOptions options) {
-    return transform(
+    return transformAsync(
         request(uri(path("/deployment-group/%s/rolling-update", deploymentGroupName)),
                 "POST", new RollingUpdateRequest(job, options)),
         ConvertResponseToPojo.create(RollingUpdateResponse.class,
@@ -569,7 +572,7 @@ public class HeliosClient implements Closeable {
     private static final AtomicInteger clientCounter = new AtomicInteger(0);
 
     private String user;
-    private ClientCertificatePath clientCertificatePath;
+    private CertKeyPaths certKeyPaths;
     private Supplier<List<Endpoint>> endpointSupplier;
     private boolean sslHostnameVerification = true;
     private ListeningScheduledExecutorService executorService;
@@ -623,8 +626,8 @@ public class HeliosClient implements Closeable {
       return this;
     }
 
-    public Builder setClientCertificatePath(final ClientCertificatePath clientCertificatePath) {
-      this.clientCertificatePath = clientCertificatePath;
+    public Builder setCertKeyPaths(final CertKeyPaths certKeyPaths) {
+      this.certKeyPaths = certKeyPaths;
       return this;
     }
 
@@ -710,16 +713,15 @@ public class HeliosClient implements Closeable {
         log.debug("Exception (possibly benign) while loading AgentProxy", e);
       }
 
-      // set up the ClientCertificatePath, giving precedence to any values set
-      // with setClientCertificatePath()
-      if (clientCertificatePath == null) {
+      // set up the CertKeyPaths, giving precedence to any values set with setCertKeyPaths()
+      if (certKeyPaths == null) {
         final String heliosCertPath = System.getenv(HELIOS_CERT_PATH);
         if (!isNullOrEmpty(heliosCertPath)) {
           final Path certPath = Paths.get(heliosCertPath, "cert.pem");
           final Path keyPath = Paths.get(heliosCertPath, "key.pem");
 
           if (certPath.toFile().canRead() && keyPath.toFile().canRead()) {
-            this.clientCertificatePath = new ClientCertificatePath(certPath, keyPath);
+            this.certKeyPaths = CertKeyPaths.create(certPath, keyPath);
           } else {
             log.warn("{} is set to {}, but {} and/or {} do not exist or cannot be read. "
                      + "Will not send client certificate in HeliosClient requests.",
@@ -730,7 +732,7 @@ public class HeliosClient implements Closeable {
 
       return new AuthenticatingHttpConnector(user,
           agentProxyOpt,
-          Optional.fromNullable(clientCertificatePath),
+          Optional.fromNullable(certKeyPaths),
           endpointIterator,
           connector);
     }
