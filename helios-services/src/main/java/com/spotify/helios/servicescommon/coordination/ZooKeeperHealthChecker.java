@@ -21,11 +21,9 @@
 package com.spotify.helios.servicescommon.coordination;
 
 import com.codahale.metrics.health.HealthCheck;
-import com.spotify.helios.servicescommon.RiemannFacade;
 import io.dropwizard.lifecycle.Managed;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
@@ -33,63 +31,26 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 
 public class ZooKeeperHealthChecker extends HealthCheck
-    implements Managed, PathChildrenCacheListener, Runnable {
-  private static final String UNKNOWN = "UNKNOWN";
+    implements Managed, PathChildrenCacheListener {
 
-  private final ScheduledExecutorService scheduler;
   private final PathChildrenCache cache;
-  private final RiemannFacade facade;
-  private final TimeUnit timeUnit;
-  private final long interval;
+  private AtomicReference<String> reasonString = new AtomicReference<String>("UNKNOWN");
 
-  private AtomicReference<String> reasonString = new AtomicReference<>(UNKNOWN);
-
-  public ZooKeeperHealthChecker(final ZooKeeperClient zooKeeperClient, final String path,
-                                final RiemannFacade facade, final TimeUnit timeUnit,
-                                final long interval) {
+  public ZooKeeperHealthChecker(final ZooKeeperClient zooKeeperClient, final String path) {
     super();
-    this.scheduler = Executors.newScheduledThreadPool(2);
+    final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
     this.cache = new PathChildrenCache(zooKeeperClient.getCuratorFramework(), path, true, false,
         scheduler);
-    this.facade = facade.stack("zookeeper-connection");
-    this.timeUnit = timeUnit;
-    this.interval = interval;
-
-    cache.getListenable().addListener(this);
-  }
-
-  @Override
-  public void run() {
-    final String reason = reasonString.get();
-    if (UNKNOWN.equals(reasonString.get())) {
-      return; // don't report anything until we get a known status
-    }
-
-    if (reason != null) {
-      facade.event()
-          .state("critical")
-          .metric(0.0)
-          .ttl(timeUnit.toSeconds(interval * 3))
-          .tags("zookeeper", "connection")
-          .description(reason)
-          .send();
-    } else {
-      facade.event()
-          .state("ok")
-          .metric(1.0)
-          .tags("zookeeper", "connection")
-          .ttl(timeUnit.toSeconds(interval * 3))
-          .send();
-    }
   }
 
   private void setState(String newState) {
     if ((reasonString.get() == null) != (newState == null)) {
       reasonString.set(newState);
-      run();
     }
   }
 
+  // TODO (mbrown): couldn't this be done with a client.getConnectionStateListenable() listener?
+  // this is keeping everything under /status/hosts cached
   @Override
   public void childEvent(CuratorFramework curator, PathChildrenCacheEvent event)
       throws Exception {
@@ -117,13 +78,11 @@ public class ZooKeeperHealthChecker extends HealthCheck
   @Override
   public void start() throws Exception {
     cache.start();
-
-    scheduler.scheduleAtFixedRate(this, 0, interval, timeUnit);
+    cache.getListenable().addListener(this);
   }
 
   @Override
   public void stop() throws Exception {
-    scheduler.shutdownNow();
   }
 
   @Override
