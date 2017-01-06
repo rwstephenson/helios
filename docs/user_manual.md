@@ -162,12 +162,12 @@ example that uses all the available configuration keys with an explanation of ea
   "ports" : {
     "http" : {
       "externalPort" : 8080,
-      "internalPort" : 8080,
+      "portMapping" : 8080,
       "protocol" : "tcp"
     },
     "http-admin" : {
       "externalPort" : 8081,
-      "internalPort" : 8081,
+      "portMapping" : 8081,
       "protocol" : "tcp"
     }
   },
@@ -262,21 +262,21 @@ Specifies how ports inside the container should be mapped/published to the host
 the container runs on. Port mappings are optional, by default nothing is mapped
 to the host.
 
-Specify an endpoint name and a single port (e.g.  `{"http": {"internalPort":
+Specify an endpoint name and a single port (e.g.  `{"http": {"portMapping":
 8080}}`) for dynamic port mapping (i.e. Docker chooses the external port).
 
 For static port mapping, specify the internal and external ports like `{"http":
-{"internalPort": 8080, "externalPort": 80}}`.
+{"portMapping": 8080, "externalPort": 80}}`.
   
-For example, `{"foo": {"internalPort": 4711}}`  will  map the internal port
+For example, `{"foo": {"portMapping": 4711}}`  will  map the internal port
 4711 of the container to an arbitrary external port on the host. 
   
-Specifying `{"foo": {"internalPort": 4711, "externalPort": 80}}` will map
+Specifying `{"foo": {"portMapping": 4711, "externalPort": 80}}` will map
 internal port 4711  of the container to port 80 on the host. 
 
 The protocol will be TCP by default. For UDP, add `"protocol": udp`, for
-example `{"quic": {"internalPort": 80, "protocol": "udp"}}` or
-`{"dns": {"internalPort": 53, "externalPort": 53, "protocol": "udp"}}`. 
+example `{"quic": {"portMapping": 80, "protocol": "udp"}}` or
+`{"dns": {"portMapping": 53, "externalPort": 53, "protocol": "udp"}}`.
 
 The name of the endpoint specified in the port mapping will be used if
 specifying service registration using the `registration` below.

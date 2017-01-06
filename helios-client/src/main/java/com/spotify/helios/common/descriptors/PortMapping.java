@@ -44,6 +44,8 @@ public class PortMapping extends Descriptor {
   public static final String TCP = "tcp";
   public static final String UDP = "udp";
 
+//  private final String name;
+//  private final InetAddress ipAddress;
   private final int internalPort;
   private final Integer externalPort;
   private final String protocol;
@@ -67,6 +69,14 @@ public class PortMapping extends Descriptor {
     this.externalPort = null;
     this.protocol = TCP;
   }
+
+//  public String getName() {
+//    return name;
+//  }
+
+//  public InetAddress getIpAddress() {
+//    return ipAddress;
+//  }
 
   public int getInternalPort() {
     return internalPort;
@@ -106,6 +116,11 @@ public class PortMapping extends Descriptor {
     return new PortMapping(internalPort, null, protocol);
   }
 
+//  public static PortMapping of(final String name, final InetAddress ipAddress, final int internalPort,
+//                               final Integer externalPort, final String protocol) {
+//    return new PortMapping(name, ipAddress, internalPort, externalPort, protocol);
+//  }
+
   @Override
   public boolean equals(final Object obj) {
     if (this == obj) {
@@ -120,6 +135,12 @@ public class PortMapping extends Descriptor {
     if (internalPort != that.internalPort) {
       return false;
     }
+//    if (name != null ? !name.equals(that.name) : that.name != null) {
+//      return false;
+//    }
+//    if (ipAddress != null ? !ipAddress.equals(that.ipAddress) : that.ipAddress != null) {
+//      return false;
+//    }
     if (externalPort != null ? !externalPort.equals(that.externalPort)
                              : that.externalPort != null) {
       return false;
