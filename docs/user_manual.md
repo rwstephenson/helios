@@ -168,6 +168,7 @@ example that uses all the available configuration keys with an explanation of ea
     "http-admin" : {
       "externalPort" : 8081,
       "internalPort" : 8081,
+      "ip" : "127.0.0.1",
       "protocol" : "tcp"
     }
   },
@@ -272,7 +273,10 @@ For example, `{"foo": {"internalPort": 4711}}`  will  map the internal port
 4711 of the container to an arbitrary external port on the host. 
   
 Specifying `{"foo": {"internalPort": 4711, "externalPort": 80}}` will map
-internal port 4711  of the container to port 80 on the host. 
+internal port 4711  of the container to port 80 on the host.
+
+The `ip` attribute is optional and specifies the IP address on which the port
+will be exposed. Any IP string literal is valid.
 
 The protocol will be TCP by default. For UDP, add `"protocol": udp`, for
 example `{"quic": {"internalPort": 80, "protocol": "udp"}}` or
